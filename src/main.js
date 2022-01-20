@@ -27,6 +27,7 @@ const ctx = canvas.getContext("2d");
 ctx.imageSmoothingEnabled = format.smoothing;
 var metadataList = [];
 var attributesList = [];
+
 var dnaList = new Set();
 const DNA_DELIMITER = "-";
 const HashlipsGiffer = require(`${basePath}/modules/HashlipsGiffer.js`);
@@ -56,6 +57,25 @@ const getRarityWeight = (_str) => {
   return nameWithoutWeight;
 };
 
+const getRaretyValue = (_str) => {
+  let nameWithoutExtension = _str.slice(0, -4);
+  let raretyValue = "";
+  var nameWithoutWeight = Number(
+    nameWithoutExtension.split(rarityDelimiter).pop()
+  );
+  if (isNaN(nameWithoutWeight)) {
+    nameWithoutWeight = 1;
+  }
+  if(nameWithoutWeight>1 && nameWithoutWeight <=10){
+    raretyValue = 'Super Rare';
+  }else if(nameWithoutWeight>10 && nameWithoutWeight<16){
+    raretyValue = 'Rare';
+  }else{
+    raretyValue = 'Common';
+  }
+  return raretyValue;
+};
+
 const cleanDna = (_str) => {
   const withoutOptions = removeQueryStrings(_str);
   var dna = Number(withoutOptions.split(":").shift());
@@ -79,11 +99,13 @@ const getElements = (path) => {
         filename: i,
         path: `${path}${i}`,
         weight: getRarityWeight(i),
+        rarety : getRaretyValue(i)
       };
     });
 };
 
 const layersSetup = (layersOrder) => {
+  // rarety insert here
   const layers = layersOrder.map((layerObj, index) => ({
     id: index,
     elements: getElements(`${layersDir}/${layerObj.name}/`),
@@ -105,6 +127,7 @@ const layersSetup = (layersOrder) => {
         : false,
   }));
   return layers;
+ 
 };
 
 const saveImage = (_editionCount) => {
@@ -173,6 +196,7 @@ const addAttributes = (_element) => {
   attributesList.push({
     trait_type: _element.layer.name,
     value: selectedElement.name,
+    rarety : selectedElement.rarety
   });
 };
 
@@ -208,7 +232,7 @@ const drawElement = (_renderObject, _index, _layersLen) => {
         format.width,
         format.height
       );
-
+  // console.log('index',_index)
   addAttributes(_renderObject);
 };
 
@@ -356,9 +380,11 @@ const startCreating = async () => {
       if (isDnaUnique(dnaList, newDna)) {
         let results = constructLayerToDna(newDna, layers);
         let loadedElements = [];
-
+        
         results.forEach((layer) => {
+          // console.log(layer);
           loadedElements.push(loadLayerImg(layer));
+
         });
 
         await Promise.all(loadedElements).then((renderObjectArray) => {
